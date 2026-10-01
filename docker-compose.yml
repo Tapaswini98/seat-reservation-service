@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: seats
+    ports:
+      - '5433:5432'
+    command:
+      - postgres
+      # The app keeps a small pool per instance; this leaves plenty of room for
+      # a burst script, psql sessions and a second instance during a deploy.
+      - -c
+      - max_connections=200
+      - -c
+      - shared_buffers=256MB
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d seats']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/seats
+      DATABASE_SSL: 'false'
+      DB_POOL_MAX: '20'
+      JWT_SECRET: local-dev-secret
+      ADMIN_TOKEN: dev-admin-token
+      LOG_LEVEL: info
+      LOG_SAMPLE_RATE: '50'
+    ports:
+      - '3000:3000'
+    restart: unless-stopped
+
+  # Separate database for `npm test`, so running the suite never destroys
+  # whatever you were poking at in the dev database.
+  postgres-test:
+    image: postgres:16-alpine
+    profiles: ['test']
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: seats_test
+    ports:
+      - '55432:5432'
+    command: ['postgres', '-c', 'max_connections=200', '-c', 'fsync=off']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d seats_test']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  pgdata:
