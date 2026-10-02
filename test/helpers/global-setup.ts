@@ -16,7 +16,7 @@ export default async function globalSetup(): Promise<void> {
   process.env.DB_POOL_MAX = '30';
   process.env.EXPIRY_SWEEP_INTERVAL_MS = '500';
 
-  const { AppDataSource } = await import('../../src/database/data-source');
+  const { AppDataSource } = await import('../../src/models/data-source');
   const ds = await AppDataSource.initialize();
   await ds.runMigrations({ transaction: 'all' });
   await ds.destroy();

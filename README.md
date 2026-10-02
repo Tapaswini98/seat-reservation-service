@@ -11,6 +11,18 @@ same show in the same second.
 Stack: NestJS 11 (Fastify) · PostgreSQL 16 · TypeORM (schema + migrations, raw
 SQL on the reservation path) · prom-client · pino.
 
+```
+src/
+  models/          entities, repositories, migrations, data source
+  modules/         auth, show, reservation, health, metrics, database
+  shared/          enums, exceptions, guards, decorators, logger, helpers
+  config/          environment loading
+```
+
+The atomic reservation transaction lives in
+[`models/repositories/reservation.repository.ts`](src/models/repositories/reservation.repository.ts);
+everything the design hinges on is commented there.
+
 ---
 
 ## Run it

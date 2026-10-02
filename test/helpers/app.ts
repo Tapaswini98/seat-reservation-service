@@ -4,9 +4,9 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../../src/app.module';
-import { registerHooks } from '../../src/common/fastify-hooks';
-import { DomainError } from '../../src/common/errors/domain-error';
-import { MetricsService } from '../../src/metrics/metrics.service';
+import { registerFastifyHooks } from '../../src/shared/middlewares/fastify-hooks';
+import { DomainException } from '../../src/shared/exceptions/domain.exception';
+import { MetricsService } from '../../src/modules/metrics/metrics.service';
 
 export interface TestApp {
   baseUrl: string;
@@ -33,7 +33,7 @@ export const startTestApp = async (): Promise<TestApp> => {
       whitelist: true,
       forbidNonWhitelisted: false,
       exceptionFactory: (errors) =>
-        DomainError.validation('Request validation failed', {
+        DomainException.validation('Request validation failed', {
           violations: errors.flatMap((e) =>
             Object.values(e.constraints ?? {}).map((m) => `${e.property}: ${m}`),
           ),
@@ -42,7 +42,7 @@ export const startTestApp = async (): Promise<TestApp> => {
   );
 
   const instance = app.getHttpAdapter().getInstance();
-  registerHooks(instance, app.get(MetricsService));
+  registerFastifyHooks(instance, app.get(MetricsService));
 
   await app.listen({ port: 0, host: '127.0.0.1' });
   const url = await app.getUrl();

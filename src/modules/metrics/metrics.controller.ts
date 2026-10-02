@@ -1,0 +1,15 @@
+import { Controller, Get, Header } from '@nestjs/common';
+import { MetricsService } from './metrics.service';
+import { Public } from '../../shared/decorators/public.decorator';
+
+@Controller()
+export class MetricsController {
+  constructor(private readonly metricsService: MetricsService) {}
+
+  @Public()
+  @Get('metrics')
+  @Header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')
+  scrape(): Promise<string> {
+    return this.metricsService.scrape();
+  }
+}

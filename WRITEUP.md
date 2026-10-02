@@ -3,7 +3,7 @@
 ## 1. The atomic decision
 
 **Where it lives:** one PostgreSQL transaction at READ COMMITTED, in
-[`reservations.repository.ts`](src/reservations/reservations.repository.ts).
+[`reservation.repository.ts`](src/models/repositories/reservation.repository.ts).
 
 The seat row *is* the resource. There is exactly one row per
 `(show_id, seat_number)`, enforced by a unique constraint, and its `status` is

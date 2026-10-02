@@ -7,27 +7,26 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
 import { loadConfig } from './config/configuration';
-import { registerHooks } from './common/fastify-hooks';
-import { DomainError } from './common/errors/domain-error';
-import { nestLoggerAdapter, rootLogger } from './common/logging/logger';
-import { MetricsService } from './metrics/metrics.service';
+import { MetricsService } from './modules/metrics/metrics.service';
+import { DomainException } from './shared/exceptions/domain.exception';
+import { nestLoggerAdapter, rootLogger } from './shared/logger/logger';
+import { registerFastifyHooks } from './shared/middlewares/fastify-hooks';
 
 async function bootstrap(): Promise<void> {
-  const cfg = loadConfig();
+  const config = loadConfig();
 
-  const adapter = new FastifyAdapter({
-    // Fastify generates its own ids by default; ours come from the inbound
-    // x-request-id when the caller supplies one, so tracing survives the hop.
-    genReqId: () => '',
-    disableRequestLogging: true,
-    bodyLimit: 1024 * 1024,
-    trustProxy: true,
-  });
-
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter, {
-    logger: nestLoggerAdapter,
-    bufferLogs: false,
-  });
+  // Fastify's own request logging stays off: correlation ids, sampling and
+  // metrics all come from our hooks, which see every reply including the ones
+  // the exception filter writes.
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter({
+      logger: false,
+      bodyLimit: 1024 * 1024,
+      trustProxy: true,
+    }),
+    { logger: nestLoggerAdapter, bufferLogs: false },
+  );
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -39,17 +38,18 @@ async function bootstrap(): Promise<void> {
       forbidNonWhitelisted: false,
       transformOptions: { enableImplicitConversion: false },
       exceptionFactory: (errors) =>
-        DomainError.validation('Request validation failed', {
-          violations: errors.flatMap((e) =>
-            Object.values(e.constraints ?? {}).map((m) => `${e.property}: ${m}`),
+        DomainException.validation('Request validation failed', {
+          violations: errors.flatMap((error) =>
+            Object.values(error.constraints ?? {}).map(
+              (message) => `${error.property}: ${message}`,
+            ),
           ),
         }),
     }),
   );
 
   const instance = app.getHttpAdapter().getInstance();
-  registerHooks(instance, app.get(MetricsService));
-
+  registerFastifyHooks(instance, app.get(MetricsService));
   app.enableShutdownHooks();
 
   const server = instance.server;
@@ -60,13 +60,13 @@ async function bootstrap(): Promise<void> {
   server.requestTimeout = 30_000;
   server.maxRequestsPerSocket = 0;
 
-  await app.listen({ port: cfg.port, host: '0.0.0.0' });
+  await app.listen({ port: config.port, host: '0.0.0.0' });
   rootLogger.info(
     {
-      port: cfg.port,
-      env: cfg.env,
-      pool_max: cfg.database.poolMax,
-      per_user_limit: cfg.domain.defaultPerUserLimit,
+      port: config.port,
+      env: config.env,
+      pool_max: config.database.poolMax,
+      per_user_limit: config.domain.defaultPerUserLimit,
     },
     'seat-reservation-service listening',
   );
