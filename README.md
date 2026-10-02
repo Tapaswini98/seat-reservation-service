@@ -34,10 +34,10 @@ against the service's own state and exits non-zero if anything is wrong.
 Last run against the live instance:
 
 ```
-  409 seat_taken..............      17883        throughput ....  106 req/s
-  409 per_user_limit..........       1583        p50 / p95 / p99  895/2103/3484 ms
+  409 seat_taken..............      17881        throughput ....  112 req/s
+  409 per_user_limit..........       1585        p50 / p95 / p99  891/1800/3702 ms
   201 confirmed...............        370
-  201 idempotent replay.......        162        reconciliation: 130 + 0 + 370 = 500
+  201 idempotent replay.......        164        reconciliation: 130 + 0 + 370 = 500
 
   [PASS] zero 5xx (saw 0)              [PASS] no seat sold twice
   [PASS] available+held+confirmed==500 [PASS] occupied == distinct 201s
@@ -48,6 +48,14 @@ Last run against the live instance:
 The same burst on a local container does **1,334 req/s at p99 912ms**. The gap
 is the free instance (0.1 CPU) and the network hop; the correctness results
 are identical, which is the part that matters.
+
+If a run reports `502 SERVER ERROR (edge/proxy, no app response)`, the free
+instance was recycled mid-burst and Render's proxy answered the requests in
+flight — the application never saw them, and `http_server_errors_total` stays
+at zero. The run still fails, correctly; the label just distinguishes a
+recycled instance from a service bug. Re-run once the instance is stable, and
+don't start a burst immediately after an env change, which triggers a
+redeploy.
 
 Other scenarios: `--scenario=hot-seat` (everyone on one seat), `stampede`,
 `user-limit`, `idempotent`. Flags: `--requests`, `--concurrency`, `--seats`,

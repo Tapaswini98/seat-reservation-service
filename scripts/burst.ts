@@ -241,7 +241,16 @@ const runPlan = async (showId: string, plan: PlannedRequest[]): Promise<Outcome[
 
         outcomes[i] = {
           status: res.status,
-          code: res.body?.error?.code,
+          // Our service always answers with a JSON envelope carrying
+          // error.code. A 5xx without one came from the platform's proxy
+          // (a restart, a cold start, an upstream timeout), not from the
+          // application. Both still fail the run -- the caller saw a 5xx
+          // either way -- but the distribution says which, because
+          // "the instance was recycled" and "the service has a bug" need
+          // very different responses.
+          code:
+            res.body?.error?.code ??
+            (res.status >= 500 ? 'edge/proxy, no app response' : undefined),
           replay: res.body?.idempotent_replay === true,
           seat: item.seat,
           user: item.user,
@@ -376,7 +385,7 @@ async function main(): Promise<void> {
       bump('transport error');
     } else if (o.status >= 500) {
       fiveXx += 1;
-      bump(`${o.status} SERVER ERROR`);
+      bump(`${o.status} SERVER ERROR (${o.code ?? 'app'})`);
     } else if (o.status === 201 && o.replay) {
       replays += 1;
       bump('201 idempotent replay');

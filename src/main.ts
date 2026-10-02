@@ -72,6 +72,11 @@ async function bootstrap(): Promise<void> {
       env: config.env,
       pool_max: config.database.poolMax,
       per_user_limit: config.domain.defaultPerUserLimit,
+      // Logged because it is environment-specific and easy to get wrong: it
+      // must exceed p99 reservation latency, and the only way to confirm the
+      // deployed value took effect is to see it at boot.
+      idempotency_wait_ms: config.domain.idempotencyWaitMs,
+      hold_seconds_default: config.domain.defaultHoldSeconds,
       docs: config.swaggerEnabled ? `/${SWAGGER_PATH}` : 'disabled',
     },
     'seat-reservation-service listening',
