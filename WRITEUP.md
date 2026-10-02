@@ -306,7 +306,15 @@ losers from that queue, which is most of the win available, but not the
 physics. Free-tier deploy spins down when idle and runs the 20k burst at ~106
 req/s versus ~1,334 on a local container — every correctness check passes
 identically in both, which is the result that matters. The auth shim has no
-user store: intentional, clearly marked, not something I'd ship.
+user store, `/auth/token` mints identities without credentials, `ADMIN_TOKEN`
+is a single static secret gating `POST /shows`, and there is no rate limiting
+anywhere. All four are deliberate: the graders need to mint twenty thousand
+buyers and create their own shows, and a limiter would throttle the very burst
+this is built to survive. None of them would ship. The blast radius is bounded
+— there are no delete endpoints, and ownership checks are per-reservation
+against the JWT subject, so the admin credential cannot touch anyone's seats —
+but an open `POST /shows` with a 20,000-seat cap is a database-fill vector
+behind nothing but an obscure URL.
 
 **Next, in order.**
 
