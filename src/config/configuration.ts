@@ -52,6 +52,7 @@ export interface AppConfig {
   port: number;
   logLevel: string;
   logSampleRate: number;
+  swaggerEnabled: boolean;
   database: {
     url: string;
     ssl: boolean;
@@ -82,39 +83,47 @@ export interface AppConfig {
   };
 }
 
-export const loadConfig = (): AppConfig => ({
-  env: process.env.NODE_ENV ?? 'development',
-  port: int(process.env.PORT, 3000),
-  logLevel: process.env.LOG_LEVEL ?? 'info',
-  logSampleRate: int(process.env.LOG_SAMPLE_RATE, 20),
-  database: {
-    url: resolveDatabaseUrl(process.env.NODE_ENV ?? 'development'),
-    ssl: bool(process.env.DATABASE_SSL, false),
-    poolMax: int(process.env.DB_POOL_MAX, 15),
-    poolMin: int(process.env.DB_POOL_MIN, 2),
-    connectionTimeoutMs: int(process.env.DB_CONNECTION_TIMEOUT_MS, 10000),
-    statementTimeoutMs: int(process.env.DB_STATEMENT_TIMEOUT_MS, 3000),
-    idleInTxTimeoutMs: int(process.env.DB_IDLE_IN_TX_TIMEOUT_MS, 5000),
-  },
-  auth: {
-    jwtSecret: process.env.JWT_SECRET ?? 'dev-only-change-me',
-    jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '24h',
-    adminToken: process.env.ADMIN_TOKEN ?? 'dev-admin-token',
-  },
-  domain: {
-    defaultPerUserLimit: int(process.env.DEFAULT_PER_USER_LIMIT, 4),
-    defaultHoldSeconds: int(process.env.DEFAULT_HOLD_SECONDS, 120),
-    maxHoldSeconds: int(process.env.MAX_HOLD_SECONDS, 900),
-    maxSeatsPerShow: int(process.env.MAX_SEATS_PER_SHOW, 20000),
-    maxSeatsPerReservation: int(process.env.MAX_SEATS_PER_RESERVATION, 10),
-    idempotencyTtlHours: int(process.env.IDEMPOTENCY_TTL_HOURS, 24),
-    idempotencyWaitMs: int(process.env.IDEMPOTENCY_WAIT_MS, 2000),
-  },
-  resilience: {
-    txMaxRetries: int(process.env.TX_MAX_RETRIES, 3),
-    expirySweepIntervalMs: int(process.env.EXPIRY_SWEEP_INTERVAL_MS, 5000),
-    expirySweepBatch: int(process.env.EXPIRY_SWEEP_BATCH, 500),
-  },
-});
+export const loadConfig = (): AppConfig => {
+  const env = process.env.NODE_ENV ?? 'development';
+
+  return {
+    env,
+    port: int(process.env.PORT, 3000),
+    logLevel: process.env.LOG_LEVEL ?? 'info',
+    logSampleRate: int(process.env.LOG_SAMPLE_RATE, 20),
+    // Off in production by default: the docs are a development and review
+    // convenience, not part of the deployed surface. Set SWAGGER_ENABLED=true
+    // on an environment where you explicitly want them.
+    swaggerEnabled: bool(process.env.SWAGGER_ENABLED, env !== 'production'),
+    database: {
+      url: resolveDatabaseUrl(env),
+      ssl: bool(process.env.DATABASE_SSL, false),
+      poolMax: int(process.env.DB_POOL_MAX, 15),
+      poolMin: int(process.env.DB_POOL_MIN, 2),
+      connectionTimeoutMs: int(process.env.DB_CONNECTION_TIMEOUT_MS, 10000),
+      statementTimeoutMs: int(process.env.DB_STATEMENT_TIMEOUT_MS, 3000),
+      idleInTxTimeoutMs: int(process.env.DB_IDLE_IN_TX_TIMEOUT_MS, 5000),
+    },
+    auth: {
+      jwtSecret: process.env.JWT_SECRET ?? 'dev-only-change-me',
+      jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '24h',
+      adminToken: process.env.ADMIN_TOKEN ?? 'dev-admin-token',
+    },
+    domain: {
+      defaultPerUserLimit: int(process.env.DEFAULT_PER_USER_LIMIT, 4),
+      defaultHoldSeconds: int(process.env.DEFAULT_HOLD_SECONDS, 120),
+      maxHoldSeconds: int(process.env.MAX_HOLD_SECONDS, 900),
+      maxSeatsPerShow: int(process.env.MAX_SEATS_PER_SHOW, 20000),
+      maxSeatsPerReservation: int(process.env.MAX_SEATS_PER_RESERVATION, 10),
+      idempotencyTtlHours: int(process.env.IDEMPOTENCY_TTL_HOURS, 24),
+      idempotencyWaitMs: int(process.env.IDEMPOTENCY_WAIT_MS, 2000),
+    },
+    resilience: {
+      txMaxRetries: int(process.env.TX_MAX_RETRIES, 3),
+      expirySweepIntervalMs: int(process.env.EXPIRY_SWEEP_INTERVAL_MS, 5000),
+      expirySweepBatch: int(process.env.EXPIRY_SWEEP_BATCH, 500),
+    },
+  };
+};
 
 export type ConfigKey = keyof AppConfig;

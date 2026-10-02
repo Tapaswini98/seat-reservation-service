@@ -131,6 +131,23 @@ identical either way, which is the point.
 
 ---
 
+## Swagger
+
+Browsable API at **http://localhost:3000/docs** when running locally, with the
+raw OpenAPI 3 document at `/docs-json`.
+
+To exercise the secured endpoints from the browser:
+
+1. `POST /auth/token` with `{"user_id": "alice"}` → copy the `token`
+2. Click **Authorize** → paste it under the `bearer` scheme
+3. For `POST /shows`, use the `x-admin-token` scheme with your `ADMIN_TOKEN`
+
+Authorization persists across page reloads.
+
+Swagger is **on outside production and off in production** — it is a
+development convenience, not part of the deployed surface. Set
+`SWAGGER_ENABLED=true` on the deployed instance to turn it on temporarily.
+
 ## API
 
 Money is always an integer number of paise. Identity always comes from the JWT
@@ -279,6 +296,7 @@ Everything has a working default; see `.env.example`.
 | `TX_MAX_RETRIES` | `3` | Retries on `40001` / `40P01` / `55P03` only. |
 | `EXPIRY_SWEEP_INTERVAL_MS` | `5000` | |
 | `LOG_SAMPLE_RATE` | `20` | 1-in-N successes; all errors always logged. |
+| `SWAGGER_ENABLED` | on, except in production | Serves Swagger UI at `/docs`. |
 
 ## Deploy
 

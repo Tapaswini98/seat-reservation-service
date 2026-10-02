@@ -1,4 +1,5 @@
 import { Controller, Get, Res } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { FastifyReply } from 'fastify';
 import { DataSource } from 'typeorm';
@@ -16,6 +17,7 @@ interface ReadinessResult {
   error?: string;
 }
 
+@ApiTags('Health')
 @Controller()
 export class HealthController {
   private cached: ReadinessResult | null = null;
@@ -29,6 +31,13 @@ export class HealthController {
    * blip would make the orchestrator kill a perfectly healthy process and
    * turn a dependency outage into an outage plus a restart loop.
    */
+  @ApiOperation({
+    summary: 'Liveness',
+    description:
+      'Never touches the database: a dependency blip must not get a healthy ' +
+      'process killed and turn an outage into a restart loop.',
+  })
+  @ApiResponse({ status: 200, description: 'Process is alive' })
   @Public()
   @Get(['healthz', 'health/live'])
   live(): { status: string; uptime_s: number } {
@@ -43,6 +52,14 @@ export class HealthController {
    * database is unreachable, so the load balancer stops sending us traffic we
    * could only answer with an error.
    */
+  @ApiOperation({
+    summary: 'Readiness',
+    description:
+      'Executes a real query and fails closed with 503 when the database is ' +
+      'unreachable, so the load balancer stops routing to this instance.',
+  })
+  @ApiResponse({ status: 200, description: 'Database reachable' })
+  @ApiResponse({ status: 503, description: 'Database unreachable' })
   @Public()
   @Get(['readyz', 'health/ready'])
   async ready(

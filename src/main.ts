@@ -11,6 +11,7 @@ import { MetricsService } from './modules/metrics/metrics.service';
 import { DomainException } from './shared/exceptions/domain.exception';
 import { nestLoggerAdapter, rootLogger } from './shared/logger/logger';
 import { registerFastifyHooks } from './shared/middlewares/fastify-hooks';
+import { SWAGGER_PATH, setupSwagger } from './shared/swagger/setup-swagger';
 
 async function bootstrap(): Promise<void> {
   const config = loadConfig();
@@ -48,6 +49,10 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
+  if (config.swaggerEnabled) {
+    setupSwagger(app, config);
+  }
+
   const instance = app.getHttpAdapter().getInstance();
   registerFastifyHooks(instance, app.get(MetricsService));
   app.enableShutdownHooks();
@@ -67,6 +72,7 @@ async function bootstrap(): Promise<void> {
       env: config.env,
       pool_max: config.database.poolMax,
       per_user_limit: config.domain.defaultPerUserLimit,
+      docs: config.swaggerEnabled ? `/${SWAGGER_PATH}` : 'disabled',
     },
     'seat-reservation-service listening',
   );

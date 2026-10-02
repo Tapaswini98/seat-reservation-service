@@ -1,7 +1,7 @@
 {
   "name": "seat-reservation-service",
   "version": "1.0.0",
-  "description": "Seat reservation service \u2014 correctness under contention",
+  "description": "Seat reservation service — correctness under contention",
   "private": true,
   "license": "UNLICENSED",
   "engines": {
@@ -22,12 +22,14 @@
   },
   "dependencies": {
     "@fastify/cors": "^10.0.1",
+    "@fastify/static": "^10.1.5",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/platform-fastify": "^11.0.0",
     "@nestjs/schedule": "^6.0.0",
+    "@nestjs/swagger": "^11.4.7",
     "@nestjs/typeorm": "^11.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",

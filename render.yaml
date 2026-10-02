@@ -30,6 +30,11 @@ services:
       # getting `request_in_flight` instead of their reservation.
       - key: IDEMPOTENCY_WAIT_MS
         value: '6000'
+      # Swagger is a development convenience and stays off here. Flip to
+      # 'true' in the dashboard if you want to walk someone through the API
+      # against the live instance; it needs no redeploy beyond the restart.
+      - key: SWAGGER_ENABLED
+        value: 'false'
       - key: LOG_LEVEL
         value: info
       - key: LOG_SAMPLE_RATE

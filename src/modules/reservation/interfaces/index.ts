@@ -1,17 +1,11 @@
-import { ReservationStatus } from '../../../shared/enums/reservation.enum';
+import { ReservationResponseDto } from '../dto/reservation-response.dto';
 
-export interface ReservationView {
-  reservation_id: string;
-  show_id: string;
-  user_id: string;
-  seats: string[];
-  amount_paise: number;
-  status: ReservationStatus;
-  expires_at: string | null;
-  created_at: string;
-  /** Present only when this response replays an earlier request with the same key. */
-  idempotent_replay?: boolean;
-}
+/**
+ * The response DTO class is the single source of truth for this shape -- it
+ * carries the OpenAPI metadata, so a field added for the API cannot drift
+ * from the field the repository returns.
+ */
+export type ReservationView = ReservationResponseDto;
 
 export interface ReserveSeatsCommand {
   userId: string;

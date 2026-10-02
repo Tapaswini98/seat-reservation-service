@@ -1,24 +1,5 @@
-import { SeatStatus } from '../../../shared/enums/seat.enum';
+import { SeatViewDto, ShowResponseDto } from '../dto/show-response.dto';
 
-export interface SeatView {
-  seat_number: string;
-  status: SeatStatus;
-  held_until: string | null;
-}
-
-export interface ShowStateView {
-  id: string;
-  name: string;
-  price_paise: number;
-  per_user_limit: number;
-  total_seats: number;
-  counts: {
-    available: number;
-    held: number;
-    confirmed: number;
-    total: number;
-  };
-  /** False means the reconciliation invariant has been violated. */
-  reconciled: boolean;
-  seats: SeatView[];
-}
+/** See the note in the reservation module's interfaces: the DTO class owns the shape. */
+export type ShowStateView = ShowResponseDto;
+export type SeatView = SeatViewDto;
