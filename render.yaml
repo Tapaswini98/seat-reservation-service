@@ -1,0 +1,39 @@
+# Render blueprint: a clean clone of this repo deploys the same way we did.
+services:
+  - type: web
+    name: seat-reservation-service
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore
+    healthCheckPath: /readyz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: seat-reservation-db
+          property: connectionString
+      - key: DATABASE_SSL
+        value: 'true'
+      # Render's free Postgres allows far more than this; a small pool with
+      # 2ms transactions sustains more throughput than a large one that
+      # starves the server of backend slots.
+      - key: DB_POOL_MAX
+        value: '20'
+      - key: LOG_LEVEL
+        value: info
+      - key: LOG_SAMPLE_RATE
+        value: '50'
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_TOKEN
+        generateValue: true
+
+databases:
+  - name: seat-reservation-db
+    plan: free
+    databaseName: seats
+    user: seats
