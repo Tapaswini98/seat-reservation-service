@@ -35,5 +35,11 @@ services:
 databases:
   - name: seat-reservation-db
     plan: free
+    # MUST match the web service's region. The `fromDatabase` connection
+    # string above is Render's *internal* URL, which only resolves inside the
+    # same region -- a mismatch here fails at connect time, not at deploy
+    # time, so the service comes up and then every request 503s.
+    region: singapore
     databaseName: seats
     user: seats
+    ipAllowList: []
