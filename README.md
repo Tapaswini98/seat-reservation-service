@@ -5,8 +5,14 @@ is that a seat is never sold twice, a user never exceeds their limit, and a
 retried request never books twice — while tens of thousands of buyers hit the
 same show in the same second.
 
-**Live URL:** `TODO — paste the deployed URL here`
-**Metrics:** `<LIVE_URL>/metrics` · **Health:** `<LIVE_URL>/healthz`, `<LIVE_URL>/readyz`
+**Live URL:** https://seat-reservation-service-mcov.onrender.com
+**Metrics:** [`/metrics`](https://seat-reservation-service-mcov.onrender.com/metrics) ·
+**Health:** [`/healthz`](https://seat-reservation-service-mcov.onrender.com/healthz),
+[`/readyz`](https://seat-reservation-service-mcov.onrender.com/readyz)
+
+> Render free tier: the instance spins down after ~15 minutes idle, so the
+> first request may take ~50s. The burst script waits for readiness. The free
+> PostgreSQL instance expires 30 days after creation (2026-11-01).
 
 Stack: NestJS 11 (Fastify) · PostgreSQL 16 · TypeORM (schema + migrations, raw
 SQL on the reservation path) · prom-client · pino.
@@ -95,27 +101,33 @@ Flags: `--requests`, `--concurrency`, `--seats`, `--hot-seats`,
 Firing 20,000 unbounded promises measures the client's file-descriptor limit,
 not the server.
 
-Sample run against the dockerised stack (20,000 requests, 500 seats, 10 hot):
+Verified against the **live Render instance**, 20,000 requests at 100 in
+flight, 500 seats, 10 hot:
 
 ```
-  409 seat_taken..............      17897
-  409 per_user_limit..........       1567
-  201 confirmed...............        372
-  201 idempotent replay.......        164
+  409 seat_taken..............      17883
+  409 per_user_limit..........       1583
+  201 confirmed...............        370
+  201 idempotent replay.......        162
 
-  throughput (req/s)..........       1334
-  p50 / p95 / p99 (ms)........  184 / 450 / 912
+  throughput (req/s)..........        106
+  p50 / p95 / p99 (ms)........  895 / 2103 / 3484
 
-  reconciliation: 128 + 0 + 372 = 500 (expected 500)
+  reconciliation: 130 + 0 + 370 = 500 (expected 500)
 
   [ PASS ] zero 5xx responses (saw 0)
   [ PASS ] no seat sold twice (500 seats contested)
   [ PASS ] available + held + confirmed == total_seats
   [ PASS ] occupied seats match distinct 201s
   [ PASS ] per-user limit of 4 held
-  [ PASS ] each idempotency key -> one reservation (164 replays)
+  [ PASS ] each idempotency key -> one reservation (162 replays)
   RESULT: PASSED
 ```
+
+The same burst against a local Docker container sustains **1,334 req/s at
+p50 184ms / p99 912ms**. The gap is the free instance (0.1 CPU, 512 MB) and
+the public network hop, not the design — the correctness results are
+identical either way, which is the point.
 
 ---
 

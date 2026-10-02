@@ -163,9 +163,14 @@ reservation commit atomically — they can never disagree.
 reservation (test: `creates exactly one reservation for 50 parallel uses of one
 key`). The 49 duplicates find `in_progress` and wait, backing off, rather than
 immediately conflicting — a client that fired the same key twice should get
-the original reservation, not a confusing 409. `IDEMPOTENCY_WAIT_MS` defaults
-to 2000 and must exceed p99 reservation latency; at 250ms, 29% of duplicates in
-a 20k burst timed out into `request_in_flight`, at 2000ms none did.
+the original reservation, not a confusing 409. `IDEMPOTENCY_WAIT_MS` must exceed p99
+reservation latency, and the burst is how you find out whether it does. At
+250ms, 29% of duplicates in a 20k local burst timed out into
+`request_in_flight`; at 2000ms, none did. Running the same burst against the
+free Render instance, where p99 is ~3.5s rather than ~0.9s, surfaced two
+`request_in_flight` responses again -- so the deployed value is 6000ms. The
+setting is environment-specific by nature, which is why it is configuration
+and not a constant.
 
 **Declines are replayed too.** If a key's first attempt lost a seat, a retry of
 that key gets the identical 409 even if the seat has since been freed. A retry
@@ -371,7 +376,11 @@ redundant while adding retry storms under exactly the contention we care about.
   winners for one seat must queue. The fast path removes the losers from that
   queue, which is most of the win available, but it cannot remove the physics.
 - Free-tier deploy: the instance spins down when idle, so the first request
-  after a quiet period pays a cold start.
+  after a quiet period pays a cold start. On 0.1 CPU over the public network
+  the same 20k burst runs at ~106 req/s (p99 3.5s) versus ~1,334 req/s (p99
+  912ms) on a local container. Every correctness check passes identically in
+  both, which is the result that matters; the throughput number measures the
+  instance, not the design.
 - The auth shim has no user store. Intentional for this exercise, clearly
   marked, and not something I would ship.
 - `reservation_seats` duplicates `seat_number` for convenience; a stricter

@@ -23,6 +23,13 @@ services:
       # starves the server of backend slots.
       - key: DB_POOL_MAX
         value: '20'
+      # A duplicate request waits this long for the original before being
+      # told to retry, so it must exceed p99 reservation latency. Measured
+      # p99 on this free instance is ~3.5s (0.1 CPU, public network), versus
+      # ~1.2s on a local container -- at the 2s default, honest retries were
+      # getting `request_in_flight` instead of their reservation.
+      - key: IDEMPOTENCY_WAIT_MS
+        value: '6000'
       - key: LOG_LEVEL
         value: info
       - key: LOG_SAMPLE_RATE
