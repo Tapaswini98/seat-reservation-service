@@ -139,15 +139,52 @@ Seat gauges are computed from the database **at scrape time**, so they
 reconcile with `GET /shows/{id}` by construction rather than by us remembering
 to decrement a counter.
 
-**Logs.** pino JSON on stdout, every line carrying `request_id` (taken from an
-inbound `X-Request-Id`, echoed back on the response, propagated via
-`AsyncLocalStorage`). Successes are sampled 1-in-N; every non-2xx is logged in
-full. `docker compose logs -f api` locally, Render dashboard → Logs in prod.
+**Logs.** pino JSON on stdout, every line carrying `request_id` — taken from
+an inbound `X-Request-Id` when present, echoed back on the response, and
+propagated through `AsyncLocalStorage` so no call site has to thread it.
+Successful responses are sampled 1-in-`LOG_SAMPLE_RATE`; **every** non-2xx is
+logged in full, because declines are the interesting part of a burst.
 
 ```json
 {"level":"info","request_id":"…","user_id":"alice","show_id":"…","seats":["A12"],
  "outcome":"declined","reason":"seat_taken","msg":"reservation declined"}
 ```
+
+**Watching it live.** Render's free tier keeps logs behind the dashboard, so
+here is a screen recording of the live logs during a hot-seat burst — 5,000
+buyers fighting over one seat, against the deployed instance:
+
+### 📹 [Live logs under load (Loom)](https://www.loom.com/share/dc9939be3bf14733b9c71d237c2bdf26)
+
+Reproduce it yourself against the live instance:
+
+```bash
+./burst.sh https://seat-reservation-service-mcov.onrender.com \
+  --requests=5000 --concurrency=100 --scenario=hot-seat --seats=50 \
+  --admin-token=<ADMIN_TOKEN>
+```
+
+Locally, `docker compose logs -f api` shows the same stream.
+
+---
+
+## Evidence from that run
+
+A single reservation first, so one log line is readable before the flood —
+note `user_id` comes from the token, and `amount_paise` is an integer:
+
+![Single reservation](docs/evidence-single-reservation.png)
+
+Then 5,000 buyers on one seat. **Exactly one 201, 4,999 clean 409s, and the
+hall still reconciles:**
+
+![Hot-seat burst summary](docs/evidence-hot-seat-summary.png)
+
+![Correctness checks all pass](docs/evidence-hot-seat-checks.png)
+
+Throughput here (78 req/s) is lower than the 20k mixed run above because every
+one of these 5,000 requests targets the same row — this is the worst case the
+design exists for, and it still returns zero 5xx.
 
 ---
 
