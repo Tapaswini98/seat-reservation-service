@@ -34,10 +34,10 @@ against the service's own state and exits non-zero if anything is wrong.
 Last run against the live instance:
 
 ```
-  409 seat_taken..............      17881        throughput ....  112 req/s
-  409 per_user_limit..........       1585        p50 / p95 / p99  891/1800/3702 ms
-  201 confirmed...............        370
-  201 idempotent replay.......        164        reconciliation: 130 + 0 + 370 = 500
+  409 seat_taken..............      17890        throughput ....  108 req/s
+  409 per_user_limit..........       1575        p50 / p95 / p99  897/2104/2991 ms
+  201 confirmed...............        371
+  201 idempotent replay.......        164        reconciliation: 129 + 0 + 371 = 500
 
   [PASS] zero 5xx (saw 0)              [PASS] no seat sold twice
   [PASS] available+held+confirmed==500 [PASS] occupied == distinct 201s

@@ -150,7 +150,7 @@ an answer.
 
 ---
 
-## 3. Holds and expiry
+## 3. Holds, expiry and ownership
 
 Both models the brief offers, through one code path. `POST /reserve` with no
 `hold_seconds` confirms outright (matching the brief's example response); with
@@ -175,6 +175,24 @@ self-healing: the next tick picks the same rows up.
 A `CHECK` constraint makes a half-written seat impossible to commit — an
 occupied seat always names its owner and reservation, an available one never
 does, only a held seat has a `held_until`.
+
+**Identity is the JWT subject, everywhere.** No handler reads a user id from a
+request body; `CurrentUser` is the only source, and it reads the verified
+token. A spoofed `user_id` in the body is *stripped* by the ValidationPipe
+(`whitelist: true, forbidNonWhitelisted: false`) rather than rejected — a 400
+would confirm to an attacker that the field is recognised, and the requirement
+is that a spoofed identity can only ever act as the token's user, not that it
+errors. A test asserts the reservation and the seat's `owner_user_id` both
+come out as the attacker, never the victim.
+
+**Cancel and confirm are owner-only, and a non-owner gets 404, not 403.**
+Ownership is re-checked against the row locked `FOR UPDATE`, not against the
+unlocked read used to find the show id. The 404 is deliberate: 403 would
+confirm that a reservation id exists, which makes ids enumerable by probing.
+The message is byte-identical to a genuine not-found, so the two are
+indistinguishable from outside. The brief requires only that a non-owner
+cannot cancel; the status code is my choice, and hiding existence is the
+safer default for a resource keyed by a guessable-looking id.
 
 ---
 
