@@ -93,4 +93,13 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-void bootstrap();
+bootstrap().catch((err) => {
+  // Config validation and the first database connection both happen in here,
+  // so this is where a misconfigured deploy surfaces. Log it as a readable
+  // line rather than letting it escape as an unhandled rejection.
+  rootLogger.fatal(
+    { err: err instanceof Error ? err.message : String(err) },
+    'failed to start',
+  );
+  process.exit(1);
+});

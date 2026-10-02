@@ -8,6 +8,45 @@ const bool = (value: string | undefined, fallback: boolean): boolean => {
   return value === 'true' || value === '1';
 };
 
+const LOCAL_DATABASE_URL = 'postgres://postgres:postgres@localhost:5433/seats';
+
+/**
+ * Outside development a missing DATABASE_URL is a deployment mistake, not
+ * something to paper over with a localhost default.
+ *
+ * Falling back silently is how you get a container that starts, fails to
+ * reach 127.0.0.1:5433, and reports `ECONNREFUSED` from somewhere deep in
+ * node:net -- an error that says nothing about the actual cause. Refusing to
+ * boot names the problem instead.
+ */
+const resolveDatabaseUrl = (env: string): string => {
+  const url = process.env.DATABASE_URL?.trim();
+  if (url) return url;
+
+  if (env === 'production') {
+    throw new Error(
+      'DATABASE_URL is not set. The service will not fall back to a local ' +
+        'database in production. On Render, check that the web service and ' +
+        'the database were created from the same Blueprint and that the ' +
+        'DATABASE_URL env var is linked via fromDatabase.',
+    );
+  }
+  return LOCAL_DATABASE_URL;
+};
+
+/**
+ * Host and port only -- safe to log. Never log the full URL: it carries the
+ * password, and deploy logs are not a secret store.
+ */
+export const describeDatabaseTarget = (url: string): string => {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.hostname}:${parsed.port || '5432'}${parsed.pathname}`;
+  } catch {
+    return 'unparseable DATABASE_URL';
+  }
+};
+
 export interface AppConfig {
   env: string;
   port: number;
@@ -49,8 +88,7 @@ export const loadConfig = (): AppConfig => ({
   logLevel: process.env.LOG_LEVEL ?? 'info',
   logSampleRate: int(process.env.LOG_SAMPLE_RATE, 20),
   database: {
-    url:
-      process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5433/seats',
+    url: resolveDatabaseUrl(process.env.NODE_ENV ?? 'development'),
     ssl: bool(process.env.DATABASE_SSL, false),
     poolMax: int(process.env.DB_POOL_MAX, 15),
     poolMin: int(process.env.DB_POOL_MIN, 2),
